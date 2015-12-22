@@ -245,7 +245,7 @@ module BackupRestore
 
       log "Archiving data dump..."
       FileUtils.cd(File.dirname(@dump_filename)) do
-        `tar --append --dereference --file #{tar_filename} #{File.basename(@dump_filename)}`
+        `tar --append -S --dereference --file #{tar_filename} #{File.basename(@dump_filename)}`
       end
 
       if @with_uploads
@@ -283,8 +283,8 @@ module BackupRestore
 
     def clean_up
       log "Cleaning stuff up..."
-      remove_tar_leftovers
-      remove_tmp_directory
+      # remove_tar_leftovers
+      # remove_tmp_directory
       unpause_sidekiq
       disable_readonly_mode if Discourse.readonly_mode?
       mark_backup_as_not_running

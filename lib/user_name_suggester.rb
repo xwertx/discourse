@@ -34,16 +34,17 @@ module UserNameSuggester
   end
 
   def self.sanitize_username(name)
+    name ||= ""
     name = ActiveSupport::Inflector.transliterate(name)
     name = name.gsub(/^[^[:alnum:]]+|\W+$/, "")
                .gsub(/\W+/, "_")
-               .gsub(/^\_+/, '')
-               .gsub(/[\-_\.]{2,}/, "_")
+               .gsub(/^_+/, "")
+               .gsub(/[-_.]{2,}/, "_")
     name
   end
 
   def self.rightsize_username(name)
-    name.ljust(User.username_length.begin, '1')[0, User.username_length.end]
+    name.ljust(User.username_length.begin, "1")[0, User.username_length.end]
   end
 
 end
