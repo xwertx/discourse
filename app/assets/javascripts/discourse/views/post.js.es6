@@ -1,103 +1,20 @@
 import ScreenTrack from 'discourse/lib/screen-track';
 import { number } from 'discourse/lib/formatter';
-import DiscourseURL from 'discourse/lib/url';
-import { default as computed, on } from 'ember-addons/ember-computed-decorators';
 import { fmt } from 'discourse/lib/computed';
 import { isValidLink } from 'discourse/lib/click-track';
 
-const DAY = 60 * 50 * 1000;
 
 const PostView = Discourse.GroupedView.extend(Ember.Evented, {
-  classNames: ['topic-post', 'clearfix'],
-  classNameBindings: ['needsModeratorClass:moderator:regular',
-                      'selected',
-                      'post.hidden:post-hidden',
-                      'post.deleted:deleted',
-                      'post.topicOwner:topic-owner',
-                      'groupNameClass',
-                      'post.wiki:wiki',
-                      'whisper'],
-
-  post: Ember.computed.alias('content'),
-  postElementId: fmt('post.post_number', 'post_%@'),
-  likedUsers: null,
-
-  @on('init')
-  initLikedUsers() {
-    this.set('likedUsers', []);
-  },
-
-  @computed('post.post_type')
-  whisper(postType) {
-    return postType === this.site.get('post_types.whisper');
-  },
+  classNameBindings: ['selected'],
 
   templateName: function() {
     return (this.get('post.post_type') === this.site.get('post_types.small_action')) ? 'post-small-action' : 'post';
   }.property('post.post_type'),
 
-  historyHeat: function() {
-    const updatedAt = this.get('post.updated_at');
-    if (!updatedAt) { return; }
-
-    // Show heat on age
-    const rightNow = new Date().getTime(),
-        updatedAtDate = new Date(updatedAt).getTime();
-
-    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_low)) return 'heatmap-high';
-    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_medium)) return 'heatmap-med';
-    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_high)) return 'heatmap-low';
-  }.property('post.updated_at'),
-
   needsModeratorClass: function() {
     return (this.get('post.post_type') === this.site.get('post_types.moderator_action')) ||
            (this.get('post.topic.is_warning') && this.get('post.firstPost'));
   }.property('post.post_type'),
-
-  groupNameClass: function() {
-    const primaryGroupName = this.get('post.primary_group_name');
-    if (primaryGroupName) {
-      return "group-" + primaryGroupName;
-    }
-  }.property('post.primary_group_name'),
-
-  showExpandButton: function() {
-    if (this.get('controller.firstPostExpanded')) { return false; }
-
-    const post = this.get('post');
-    return post.get('post_number') === 1 && post.get('topic.expandable_first_post');
-  }.property('post.post_number', 'controller.firstPostExpanded'),
-
-  // If the cooked content changed, add the quote controls
-  cookedChanged: function() {
-    Em.run.scheduleOnce('afterRender', this, '_cookedWasChanged');
-  }.observes('post.cooked'),
-
-  _cookedWasChanged() {
-    this.trigger('postViewUpdated', this.$());
-    this._insertQuoteControls();
-  },
-
-  mouseUp(e) {
-    if (this.get('controller.multiSelect') && (e.metaKey || e.ctrlKey)) {
-      this.get('controller').toggledSelectedPost(this.get('post'));
-    }
-  },
-
-  selected: function() {
-    return this.get('controller').postSelected(this.get('post'));
-  }.property('controller.selectedPostsCount'),
-
-  canSelectReplies: function() {
-    if (this.get('post.reply_count') === 0) { return false; }
-    return !this.get('selected');
-  }.property('post.reply_count', 'selected'),
-
-  selectPostText: function() {
-    return this.get('selected') ? I18n.t('topic.multi_select.selected', { count: this.get('controller.selectedPostsCount') }) : I18n.t('topic.multi_select.select');
-  }.property('selected', 'controller.selectedPostsCount'),
-
-  repliesShown: Em.computed.gt('post.replies.length', 0),
 
   _updateQuoteElements($aside, desc) {
     let navLink = "";
@@ -202,67 +119,16 @@ const PostView = Discourse.GroupedView.extend(Ember.Evented, {
   },
 
   actions: {
-    toggleLike() {
-      const currentUser = this.get('controller.currentUser');
-      const post = this.get('post');
-      const likeAction = post.get('likeAction');
-      if (likeAction && likeAction.get('canToggle')) {
-        const users = this.get('likedUsers');
-        const store = this.get('controller.store');
-        const action = store.createRecord('post-action-user',
-          currentUser.getProperties('id', 'username', 'avatar_template')
-        );
-
-        if (likeAction.toggle(post) && users.get('length')) {
-          users.addObject(action);
-        } else {
-          users.removeObject(action);
-        }
-      }
-    },
-
-    toggleWhoLiked() {
-      const post = this.get('post');
-      const likeAction = post.get('likeAction');
-      if (likeAction) {
-        const users = this.get('likedUsers');
-        if (users.get('length')) {
-          users.clear();
-        } else {
-          likeAction.loadUsers(post).then(newUsers => this.set('likedUsers', newUsers));
-        }
-      }
-    },
 
     // Toggle the replies this post is a reply to
     toggleReplyHistory(post) {
-      const replyHistory = post.get('replyHistory'),
-            topicController = this.get('controller'),
+      const topicController = this.get('controller'),
             origScrollTop = $(window).scrollTop(),
-            replyPostNumber = this.get('post.reply_to_post_number'),
-            postNumber = this.get('post.post_number'),
             self = this;
 
-      if (Discourse.Mobile.mobileView) {
-        DiscourseURL.routeTo(this.get('post.topic').urlForPostNumber(replyPostNumber));
-        return;
-      }
-
       const stream = topicController.get('model.postStream');
-      const offsetFromTop = this.$().position().top - $(window).scrollTop();
 
-      if(Discourse.SiteSettings.experimental_reply_expansion) {
-        if(postNumber - replyPostNumber > 1) {
-          stream.collapsePosts(replyPostNumber + 1, postNumber - 1);
-        }
-
-        Em.run.next(function() {
-          PostView.highlight(replyPostNumber);
-          $(window).scrollTop(self.$().position().top - offsetFromTop);
-        });
-        return;
-      }
-
+      const replyHistory = [];
       if (replyHistory.length > 0) {
         const origHeight = this.$('.embedded-posts.top').height();
 
@@ -271,11 +137,7 @@ const PostView = Discourse.GroupedView.extend(Ember.Evented, {
           $(window).scrollTop(origScrollTop - origHeight);
         });
       } else {
-        post.set('loadingReplyHistory', true);
-
         stream.findReplyHistory(post).then(function () {
-          post.set('loadingReplyHistory', false);
-
           Em.run.next(function() {
             $(window).scrollTop(origScrollTop + self.$('.embedded-posts.top').height());
           });
@@ -327,7 +189,6 @@ const PostView = Discourse.GroupedView.extend(Ember.Evented, {
     // Find all the quotes
     Em.run.scheduleOnce('afterRender', this, '_insertQuoteControls');
 
-    $post.closest('.post-cloak').attr('data-post-number', postNumber);
     this._applySearchHighlight();
   }.on('didInsertElement'),
 
