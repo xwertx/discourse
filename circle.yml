@@ -1,23 +1,23 @@
 machine:
-	ruby:
-		version: rbx-2.2.0
+  ruby:
+	version: rbx-2.2.0
 
 dependencies:
-	pre:
-		- gem uninstall bundler
-		- gem install bundler --pre
-	override:
-		- bundle install:
-			timeout: 180
+  pre:
+	- gem uninstall bundler
+	- gem install bundler --pre
+  override:
+	- bundle install:
+		timeout: 180
 
 database:
-	override:
-		- bundle exec rake db:create db:migrate
+  override:
+	- bundle exec rake db:create db:migrate
 
 test:
-	post:
-		- bundle exec rspec
-		- bundle exec rake plugin:spec
-		- bundle exec rake qunit:test
-			environment:
-				RAILS_ENV: test
+  post:
+	- bundle exec rspec
+	- bundle exec rake plugin:spec
+	- bundle exec rake qunit:test
+		environment:
+			RAILS_ENV: test
