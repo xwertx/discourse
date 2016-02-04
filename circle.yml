@@ -14,9 +14,15 @@ database:
 
 test:
   post:
-   - bundle exec rspec
-   - bundle exec rake plugin:spec
-   - bundle exec rake qunit:test
+   - bundle exec rspec:
+        environment:
+          RAILS_ENV: test
+          RACK_ENV: test
+   - bundle exec rake plugin:spec:
+        environment:
+          RAILS_ENV: test
+          RACK_ENV: test
+   - bundle exec rake qunit:test:
         environment:
           RAILS_ENV: test
           RACK_ENV: test
