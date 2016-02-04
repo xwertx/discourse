@@ -8,7 +8,6 @@ dependencies:
    - gem install bundler --pre
   override:
    - bundle install
-    timeout: 180
 
 database:
   override:
