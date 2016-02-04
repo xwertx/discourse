@@ -7,7 +7,7 @@ dependencies:
    - gem uninstall bundler
    - gem install bundler --pre
   override:
-   - bundle install:
+   - bundle install
     timeout: 180
 
 database:
