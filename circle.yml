@@ -1,6 +1,6 @@
 machine:
   ruby:
-   version: rbx-2.2.0
+   version: r2.2.0
 
 dependencies:
   pre:
