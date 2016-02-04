@@ -18,5 +18,5 @@ test:
    - bundle exec rspec
    - bundle exec rake plugin:spec
    - bundle exec rake qunit:test
-    environment:
-     RAILS_ENV: test
+       environment:
+         RAILS_ENV: test
